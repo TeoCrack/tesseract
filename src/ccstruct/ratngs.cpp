@@ -33,9 +33,6 @@
 
 namespace tesseract {
 
-ELISTIZE(BLOB_CHOICE)
-ELISTIZE(WERD_CHOICE)
-
 const float WERD_CHOICE::kBadRating = 100000.0;
 // Min offset in baseline-normalized coords to make a character a subscript.
 const int kMinSubscriptOffset = 20;
@@ -741,6 +738,7 @@ void WERD_CHOICE::DisplaySegmentation(TWERD *word) {
   static std::vector<int> prev_drawn_state;
   bool already_done = prev_drawn_state.size() == length_;
   if (!already_done) {
+    prev_drawn_state.clear();
     prev_drawn_state.resize(length_);
   }
   for (int i = 0; i < length_; ++i) {

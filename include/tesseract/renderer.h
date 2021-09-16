@@ -90,7 +90,7 @@ public:
   }
 
   // Is everything fine? Otherwise something went wrong.
-  bool happy() {
+  bool happy() const {
     return happy_;
   }
 
@@ -141,12 +141,12 @@ protected:
   void AppendData(const char *s, int len);
 
 private:
+  TessResultRenderer *next_; // Can link multiple renderers together
+  FILE *fout_;               // output file pointer
   const char *file_extension_; // standard extension for generated output
   std::string title_;          // title of document being rendered
   int imagenum_;               // index of last image added
 
-  FILE *fout_;               // output file pointer
-  TessResultRenderer *next_; // Can link multiple renderers together
   bool happy_;               // I get grumpy when the disk fills up, etc.
 };
 
@@ -189,6 +189,9 @@ protected:
   bool BeginDocumentHandler() override;
   bool AddImageHandler(TessBaseAPI *api) override;
   bool EndDocumentHandler() override;
+
+private:
+  bool begin_document;
 };
 
 /**
@@ -215,7 +218,8 @@ class TESS_API TessPDFRenderer : public TessResultRenderer {
 public:
   // datadir is the location of the TESSDATA. We need it because
   // we load a custom PDF font from this location.
-  TessPDFRenderer(const char *outputbase, const char *datadir, bool textonly = false);
+  TessPDFRenderer(const char *outputbase, const char *datadir,
+                  bool textonly = false);
 
 protected:
   bool BeginDocumentHandler() override;
@@ -240,8 +244,9 @@ private:
   // Create the /Contents object for an entire page.
   char *GetPDFTextObjects(TessBaseAPI *api, double width, double height);
   // Turn an image into a PDF object. Only transcode if we have to.
-  static bool imageToPDFObj(Pix *pix, const char *filename, long int objnum, char **pdf_object,
-                            long int *pdf_object_size, int jpg_quality);
+  static bool imageToPDFObj(Pix *pix, const char *filename, long int objnum,
+                            char **pdf_object, long int *pdf_object_size,
+                            int jpg_quality);
 };
 
 /**

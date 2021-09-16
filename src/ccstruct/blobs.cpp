@@ -56,8 +56,6 @@ const TPOINT kDivisibleVerticalItalic(1, 5);
               F u n c t i o n s
 ----------------------------------------------------------------------*/
 
-CLISTIZE(EDGEPT)
-
 // Returns true when the two line segments cross each other.
 // (Moved from outlines.cpp).
 // Finds where the projected lines would cross and then checks to see if the
@@ -560,7 +558,9 @@ void TBLOB::GetPreciseBoundingBox(TBOX *precise_box) const {
 // Eg x_coords[1] is a collection of the x-coords of edges at y=bottom + 1.
 void TBLOB::GetEdgeCoords(const TBOX &box, std::vector<std::vector<int>> &x_coords,
                           std::vector<std::vector<int>> &y_coords) const {
+  x_coords.clear();
   x_coords.resize(box.height());
+  y_coords.clear();
   y_coords.resize(box.width());
   CollectEdges(box, nullptr, nullptr, &x_coords, &y_coords);
   // Sort the output vectors.

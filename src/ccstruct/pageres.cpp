@@ -45,11 +45,6 @@ struct Pix;
 
 namespace tesseract {
 
-ELISTIZE(BLOCK_RES)
-CLISTIZE(BLOCK_RES)
-ELISTIZE(ROW_RES)
-ELISTIZE(WERD_RES)
-
 // Gain factor for computing thresholds that determine the ambiguity of a
 // word.
 static const double kStopperAmbiguityThresholdGain = 8.0;
@@ -731,7 +726,7 @@ void WERD_RES::PrintBestChoices() const {
 
 // Returns the sum of the widths of the blob between start_blob and last_blob
 // inclusive.
-int WERD_RES::GetBlobsWidth(int start_blob, int last_blob) {
+int WERD_RES::GetBlobsWidth(int start_blob, int last_blob) const {
   int result = 0;
   for (int b = start_blob; b <= last_blob; ++b) {
     result += blob_widths[b];
@@ -742,7 +737,7 @@ int WERD_RES::GetBlobsWidth(int start_blob, int last_blob) {
   return result;
 }
 // Returns the width of a gap between the specified blob and the next one.
-int WERD_RES::GetBlobsGap(int blob_index) {
+int WERD_RES::GetBlobsGap(int blob_index) const {
   if (blob_index < 0 || blob_index >= blob_gaps.size()) {
     return 0;
   }
@@ -906,6 +901,7 @@ void WERD_RES::FakeClassifyWord(int blob_count, BLOB_CHOICE **choices) {
   }
   FakeWordFromRatings(TOP_CHOICE_PERM);
   reject_map.initialise(blob_count);
+  best_state.clear();
   best_state.resize(blob_count, 1);
   done = true;
 }

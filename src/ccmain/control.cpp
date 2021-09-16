@@ -235,7 +235,7 @@ bool Tesseract::RecogAllWordsPassN(int pass_n, ETEXT_DESC *monitor, PAGE_RES_IT 
         continue;
       }
     }
-    // Sync pr_it with the wth WordData.
+    // Sync pr_it with the WordData.
     while (pr_it->word() != nullptr && pr_it->word() != word->word) {
       pr_it->forward();
     }
@@ -982,9 +982,12 @@ void Tesseract::AssignDiacriticsToOverlappingBlobs(const std::vector<C_OUTLINE *
                                                    std::vector<bool> *overlapped_any_blob,
                                                    std::vector<C_BLOB *> *target_blobs) {
   std::vector<bool> blob_wanted;
-  word_wanted->resize(outlines.size(), false);
-  overlapped_any_blob->resize(outlines.size(), false);
-  target_blobs->resize(outlines.size(), nullptr);
+  word_wanted->clear();
+  word_wanted->resize(outlines.size());
+  overlapped_any_blob->clear();
+  overlapped_any_blob->resize(outlines.size());
+  target_blobs->clear();
+  target_blobs->resize(outlines.size());
   // For each real blob, find the outlines that seriously overlap it.
   // A single blob could be several merged characters, so there can be quite
   // a few outlines overlapping, and the full engine needs to be used to chop
@@ -993,7 +996,8 @@ void Tesseract::AssignDiacriticsToOverlappingBlobs(const std::vector<C_OUTLINE *
   for (blob_it.mark_cycle_pt(); !blob_it.cycled_list(); blob_it.forward()) {
     C_BLOB *blob = blob_it.data();
     const TBOX blob_box = blob->bounding_box();
-    blob_wanted.resize(outlines.size(), false);
+    blob_wanted.clear();
+    blob_wanted.resize(outlines.size());
     int num_blob_outlines = 0;
     for (unsigned i = 0; i < outlines.size(); ++i) {
       if (blob_box.major_x_overlap(outlines[i]->bounding_box()) && !(*word_wanted)[i]) {
@@ -1032,15 +1036,18 @@ void Tesseract::AssignDiacriticsToNewBlobs(const std::vector<C_OUTLINE *> &outli
                                            std::vector<bool> *word_wanted,
                                            std::vector<C_BLOB *> *target_blobs) {
   std::vector<bool> blob_wanted;
-  word_wanted->resize(outlines.size(), false);
-  target_blobs->resize(outlines.size(), nullptr);
+  word_wanted->clear();
+  word_wanted->resize(outlines.size());
+  target_blobs->clear();
+  target_blobs->resize(outlines.size());
   // Check for outlines that need to be turned into stand-alone blobs.
   for (unsigned i = 0; i < outlines.size(); ++i) {
     if (outlines[i] == nullptr) {
       continue;
     }
     // Get a set of adjacent outlines that don't overlap any existing blob.
-    blob_wanted.resize(outlines.size(), false);
+    blob_wanted.clear();
+    blob_wanted.resize(outlines.size());
     int num_blob_outlines = 0;
     TBOX total_ol_box(outlines[i]->bounding_box());
     while (i < outlines.size() && outlines[i] != nullptr) {
@@ -1922,9 +1929,21 @@ void Tesseract::set_word_fonts(WERD_RES *word) {
   ASSERT_HOST(word->best_choice != nullptr);
 
 #ifndef DISABLED_LEGACY_ENGINE
-  const int fontinfo_size = get_fontinfo_table().size();
+  const int fontinfo_size = fontinfo_table_.size();
   if (fontinfo_size == 0) {
     return;
+  }
+  if (tessedit_font_id > 0) {
+    if (tessedit_font_id >= fontinfo_size) {
+      tprintf("Error, invalid font ID provided: must be below %d.\n"
+              "Falling back to font auto-detection.\n", fontinfo_size);
+    } else {
+      word->fontinfo = &fontinfo_table_.at(tessedit_font_id);
+      word->fontinfo2 = nullptr;
+      word->fontinfo_id_count = INT8_MAX;
+      word->fontinfo_id2_count = 0;
+      return;
+    }
   }
   std::vector<int> font_total_score(fontinfo_size);
 

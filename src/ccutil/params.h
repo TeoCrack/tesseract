@@ -247,11 +247,11 @@ public:
   const char *c_str() const {
     return value_.c_str();
   }
-  bool contains(char c) {
+  bool contains(char c) const {
     return value_.find(c) != std::string::npos;
   }
-  bool empty() {
-    return value_.length() <= 0;
+  bool empty() const {
+    return value_.empty();
   }
   bool operator==(const std::string &other) {
     return value_ == other;
@@ -345,13 +345,13 @@ ParamsVectors *GlobalParams();
  * (there is no such guarantee for parameters defined with the other macros).
  *************************************************************************/
 
-#define INT_VAR_H(name, val, comment) ::tesseract::IntParam name
+#define INT_VAR_H(name) ::tesseract::IntParam name
 
-#define BOOL_VAR_H(name, val, comment) ::tesseract::BoolParam name
+#define BOOL_VAR_H(name) ::tesseract::BoolParam name
 
-#define STRING_VAR_H(name, val, comment) ::tesseract::StringParam name
+#define STRING_VAR_H(name) ::tesseract::StringParam name
 
-#define double_VAR_H(name, val, comment) ::tesseract::DoubleParam name
+#define double_VAR_H(name) ::tesseract::DoubleParam name
 
 #define INT_VAR(name, val, comment) \
   ::tesseract::IntParam name(val, #name, comment, false, ::tesseract::GlobalParams())

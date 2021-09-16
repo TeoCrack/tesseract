@@ -45,12 +45,16 @@
 
 namespace tesseract {
 
+#ifndef GRAPHICS_DISABLED
+
 // Min and max window sizes.
 const int kMinWinSize = 500;
 const int kMaxWinSize = 2000;
 // Window frame sizes need adding on to make the content fit.
 const int kXWinFrameSize = 30;
 const int kYWinFrameSize = 80;
+
+#endif // !GRAPHICS_DISABLED
 
 // String names corresponding to the NetworkType enum.
 // Keep in sync with NetworkType.
@@ -317,7 +321,7 @@ Network *Network::CreateFromFile(TFile *fp) {
 }
 
 // Returns a random number in [-range, range].
-double Network::Random(double range) {
+TFloat Network::Random(TFloat range) {
   ASSERT_HOST(randomizer_ != nullptr);
   return randomizer_->SignedRand(range);
 }
@@ -373,7 +377,7 @@ void Network::ClearWindow(bool tess_coords, const char *window_name, int width, 
 // The pix is pixDestroyed.
 int Network::DisplayImage(Image pix, ScrollView *window) {
   int height = pixGetHeight(pix);
-  window->Image(pix, 0, 0);
+  window->Draw(pix, 0, 0);
   pix.destroy();
   return height;
 }

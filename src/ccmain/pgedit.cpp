@@ -108,7 +108,7 @@ static bool recog_done = false; // recog_all_words was called
 
 // These variables should remain global, since they are only used for the
 // debug mode (in which only a single Tesseract thread/instance will exist).
-static BITS16 word_display_mode;
+static std::bitset<16> word_display_mode;
 static ColorationMode color_mode = CM_RAINBOW;
 static bool display_image = false;
 static bool display_blocks = false;
@@ -122,13 +122,6 @@ INT_VAR(editor_image_ypos, 10, "Editor image Y Pos");
 static INT_VAR(editor_image_menuheight, 50, "Add to image height for menu bar");
 INT_VAR(editor_image_word_bb_color, ScrollView::BLUE, "Word bounding box colour");
 INT_VAR(editor_image_blob_bb_color, ScrollView::YELLOW, "Blob bounding box colour");
-INT_VAR(editor_image_text_color, ScrollView::WHITE, "Correct text colour");
-
-STRING_VAR(editor_dbwin_name, "EditorDBWin", "Editor debug window name");
-INT_VAR(editor_dbwin_xpos, 50, "Editor debug window X Pos");
-INT_VAR(editor_dbwin_ypos, 500, "Editor debug window Y Pos");
-INT_VAR(editor_dbwin_height, 24, "Editor debug window height");
-INT_VAR(editor_dbwin_width, 80, "Editor debug window width");
 
 STRING_VAR(editor_word_name, "BlnWords", "BL normalized word window");
 INT_VAR(editor_word_xpos, 60, "Word window X Pos");
@@ -333,7 +326,7 @@ void Tesseract::do_re_display(bool (tesseract::Tesseract::*word_painter)(PAGE_RE
 
   image_win->Clear();
   if (display_image) {
-    image_win->Image(pix_binary_, 0, 0);
+    image_win->Draw(pix_binary_, 0, 0);
   }
 
   image_win->Brush(ScrollView::NONE);

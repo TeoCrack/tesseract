@@ -74,6 +74,11 @@ Tesseract::Tesseract()
                "11=sparse_text, 12=sparse_text+osd, 13=raw_line"
                " (Values from PageSegMode enum in tesseract/publictypes.h)",
                this->params())
+    , INT_MEMBER(thresholding_method,
+                 static_cast<int>(tesseract::ThresholdMethod::Otsu),
+                 "Thresholding "
+                 "method: 0 = Otsu, 1 = Adaptive Otsu, 2 = Sauvola",
+                 this->params())
     , INT_INIT_MEMBER(tessedit_ocr_engine_mode, tesseract::OEM_DEFAULT,
                       "Which OCR engine(s) to run (Tesseract, LSTM, both)."
                       " Defaults to loading and running the most accurate"
@@ -129,6 +134,7 @@ Tesseract::Tesseract()
     , BOOL_MEMBER(tessedit_enable_doc_dict, true, "Add words to the document dictionary",
                   this->params())
     , BOOL_MEMBER(tessedit_debug_fonts, false, "Output font info per char", this->params())
+    , INT_MEMBER(tessedit_font_id, 0, "Font ID to use or zero", this->params())
     , BOOL_MEMBER(tessedit_debug_block_rejection, false, "Block and Row stats", this->params())
     , BOOL_MEMBER(tessedit_enable_bigram_correction, true,
                   "Enable correction based on the word bigram dictionary.", this->params())
@@ -256,7 +262,7 @@ Tesseract::Tesseract()
     , INT_MEMBER(fixsp_non_noise_limit, 1, "How many non-noise blbs either side?", this->params())
     , double_MEMBER(fixsp_small_outlines_size, 0.28, "Small if lt xht x this", this->params())
     , BOOL_MEMBER(tessedit_prefer_joined_punct, false, "Reward punctuation joins", this->params())
-    , INT_MEMBER(fixsp_done_mode, 1, "What constitues done for spacing", this->params())
+    , INT_MEMBER(fixsp_done_mode, 1, "What constitutes done for spacing", this->params())
     , INT_MEMBER(debug_fix_space_level, 0, "Contextual fixspace debug", this->params())
     , STRING_MEMBER(numeric_punctuation, ".,", "Punct. chs expected WITHIN numbers", this->params())
     , INT_MEMBER(x_ht_acceptance_tolerance, 8,
@@ -519,7 +525,7 @@ void Tesseract::PrepareForPageseg() {
       max_pageseg_strategy = pageseg_strategy;
     }
     sub_lang->pix_binary_.destroy();
-    sub_lang->pix_binary_ = pixClone(pix_binary());
+    sub_lang->pix_binary_ = pix_binary().clone();
   }
   // Perform shiro-rekha (top-line) splitting and replace the current image by
   // the newly split image.
@@ -528,7 +534,7 @@ void Tesseract::PrepareForPageseg() {
   if (splitter_.Split(true, &pixa_debug_)) {
     ASSERT_HOST(splitter_.splitted_image());
     pix_binary_.destroy();
-    pix_binary_ = pixClone(splitter_.splitted_image());
+    pix_binary_ = splitter_.splitted_image().clone();
   }
 }
 
@@ -556,7 +562,7 @@ void Tesseract::PrepareForTessOCR(BLOCK_LIST *block_list, Tesseract *osd_tess, O
   // Restore pix_binary to the binarized original pix for future reference.
   ASSERT_HOST(splitter_.orig_pix());
   pix_binary_.destroy();
-  pix_binary_ = pixClone(splitter_.orig_pix());
+  pix_binary_ = splitter_.orig_pix().clone();
   // If the pageseg and ocr strategies are different, refresh the block list
   // (from the last SegmentImage call) with blobs from the real image to be used
   // for OCR.

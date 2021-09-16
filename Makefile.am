@@ -9,11 +9,16 @@ ACLOCAL_AMFLAGS = -I m4
 
 CLEANFILES =
 
+DEFAULT_INCLUDES =
+
 SUBDIRS = . tessdata
 
 EXTRA_DIST = README.md LICENSE
 EXTRA_DIST += aclocal.m4 config configure.ac autogen.sh
-EXTRA_DIST += tesseract.pc.in java doc
+EXTRA_DIST += tesseract.pc.in doc
+if !GRAPHICS_DISABLED
+EXTRA_DIST += java
+endif
 EXTRA_DIST += CMakeLists.txt tesseract.pc.cmake cmake VERSION
 
 DIST_SUBDIRS = $(SUBDIRS)
@@ -30,11 +35,13 @@ dist-hook:
 	rm -f `find $(distdir) -name '*~'`
 	rm -rf $(distdir)/doc/html/* $(distdir)/doc/*.log
 
+if !GRAPHICS_DISABLED
 ScrollView.jar:
 	@cd "$(top_builddir)/java" && $(MAKE) $@
 
 install-jars:
 	@cd "$(top_builddir)/java" && $(MAKE) $@
+endif
 
 doc:
 	-srcdir="$(top_srcdir)" builddir="$(top_builddir)" \
@@ -137,13 +144,18 @@ noinst_HEADERS += src/arch/simddetect.h
 noinst_LTLIBRARIES += libtesseract_native.la
 
 libtesseract_native_la_CXXFLAGS = -O3 -ffast-math
+if OPENMP_SIMD
+libtesseract_native_la_CXXFLAGS += -fopenmp-simd -DOPENMP_SIMD
+endif
 if MARCH_NATIVE_OPT
 libtesseract_native_la_CXXFLAGS += -march=native -mtune=native
 endif
+libtesseract_native_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
 libtesseract_native_la_SOURCES = src/arch/dotproduct.cpp
 
 if HAVE_AVX
 libtesseract_avx_la_CXXFLAGS = -mavx
+libtesseract_avx_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
 libtesseract_avx_la_SOURCES = src/arch/dotproductavx.cpp
 libtesseract_la_LIBADD += libtesseract_avx.la
 noinst_LTLIBRARIES += libtesseract_avx.la
@@ -151,6 +163,7 @@ endif
 
 if HAVE_AVX2
 libtesseract_avx2_la_CXXFLAGS = -mavx2
+libtesseract_avx2_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
 libtesseract_avx2_la_SOURCES = src/arch/intsimdmatrixavx2.cpp
 libtesseract_la_LIBADD += libtesseract_avx2.la
 noinst_LTLIBRARIES += libtesseract_avx2.la
@@ -158,6 +171,7 @@ endif
 
 if HAVE_FMA
 libtesseract_fma_la_CXXFLAGS = -mfma
+libtesseract_fma_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
 libtesseract_fma_la_SOURCES = src/arch/dotproductfma.cpp
 libtesseract_la_LIBADD += libtesseract_fma.la
 noinst_LTLIBRARIES += libtesseract_fma.la
@@ -165,6 +179,7 @@ endif
 
 if HAVE_SSE4_1
 libtesseract_sse_la_CXXFLAGS = -msse4.1
+libtesseract_sse_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
 libtesseract_sse_la_SOURCES = src/arch/dotproductsse.cpp src/arch/intsimdmatrixsse.cpp
 libtesseract_la_LIBADD += libtesseract_sse.la
 noinst_LTLIBRARIES += libtesseract_sse.la
@@ -172,7 +187,13 @@ endif
 
 if HAVE_NEON
 libtesseract_neon_la_CXXFLAGS = $(NEON_CXXFLAGS)
+libtesseract_neon_la_CXXFLAGS += -O3
+if OPENMP_SIMD
+libtesseract_neon_la_CXXFLAGS += -fopenmp-simd -DOPENMP_SIMD
+endif
+libtesseract_neon_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
 libtesseract_neon_la_SOURCES = src/arch/intsimdmatrixneon.cpp
+libtesseract_neon_la_SOURCES += src/arch/dotproductneon.cpp
 libtesseract_la_LIBADD += libtesseract_neon.la
 noinst_LTLIBRARIES += libtesseract_neon.la
 endif
@@ -210,8 +231,10 @@ libtesseract_la_SOURCES += src/ccmain/pageiterator.cpp
 libtesseract_la_SOURCES += src/ccmain/pagesegmain.cpp
 libtesseract_la_SOURCES += src/ccmain/pagewalk.cpp
 libtesseract_la_SOURCES += src/ccmain/paragraphs.cpp
+if !GRAPHICS_DISABLED
 libtesseract_la_SOURCES += src/ccmain/paramsd.cpp
 libtesseract_la_SOURCES += src/ccmain/pgedit.cpp
+endif
 libtesseract_la_SOURCES += src/ccmain/reject.cpp
 libtesseract_la_SOURCES += src/ccmain/resultiterator.cpp
 libtesseract_la_SOURCES += src/ccmain/tessedit.cpp
@@ -247,6 +270,7 @@ noinst_HEADERS += src/ccstruct/crakedge.h
 noinst_HEADERS += src/ccstruct/debugpixa.h
 noinst_HEADERS += src/ccstruct/detlinefit.h
 noinst_HEADERS += src/ccstruct/dppoint.h
+noinst_HEADERS += src/ccstruct/image.h
 noinst_HEADERS += src/ccstruct/imagedata.h
 noinst_HEADERS += src/ccstruct/linlsq.h
 noinst_HEADERS += src/ccstruct/matrix.h
@@ -271,7 +295,6 @@ noinst_HEADERS += src/ccstruct/seam.h
 noinst_HEADERS += src/ccstruct/split.h
 noinst_HEADERS += src/ccstruct/statistc.h
 noinst_HEADERS += src/ccstruct/stepblob.h
-noinst_HEADERS += src/ccstruct/tabletransfer.h
 noinst_HEADERS += src/ccstruct/werd.h
 if !DISABLED_LEGACY_ENGINE
 noinst_HEADERS += src/ccstruct/fontinfo.h
@@ -288,6 +311,7 @@ libtesseract_la_SOURCES += src/ccstruct/ccstruct.cpp
 libtesseract_la_SOURCES += src/ccstruct/coutln.cpp
 libtesseract_la_SOURCES += src/ccstruct/detlinefit.cpp
 libtesseract_la_SOURCES += src/ccstruct/dppoint.cpp
+libtesseract_la_SOURCES += src/ccstruct/image.cpp
 libtesseract_la_SOURCES += src/ccstruct/imagedata.cpp
 libtesseract_la_SOURCES += src/ccstruct/linlsq.cpp
 libtesseract_la_SOURCES += src/ccstruct/matrix.cpp
@@ -323,10 +347,9 @@ endif
 libtesseract_ccutil_la_CPPFLAGS = $(AM_CPPFLAGS)
 libtesseract_ccutil_la_CPPFLAGS += $(libarchive_CFLAGS)
 if !NO_TESSDATA_PREFIX
-libtesseract_ccutil_la_CPPFLAGS += -DTESSDATA_PREFIX=@datadir@
+libtesseract_ccutil_la_CPPFLAGS += -DTESSDATA_PREFIX='"@datadir@"'
 endif
 
-noinst_HEADERS += src/ccutil/bits16.h
 noinst_HEADERS += src/ccutil/ccutil.h
 noinst_HEADERS += src/ccutil/clst.h
 noinst_HEADERS += src/ccutil/elst2.h
@@ -379,7 +402,6 @@ if !DISABLED_LEGACY_ENGINE
 libtesseract_ccutil_la_SOURCES += src/ccutil/ambigs.cpp
 libtesseract_ccutil_la_SOURCES += src/ccutil/bitvector.cpp
 libtesseract_ccutil_la_SOURCES += src/ccutil/indexmapbidi.cpp
-libtesseract_ccutil_la_SOURCES += src/ccutil/universalambigs.cpp
 endif
 
 # Rules for src/classify.
@@ -430,7 +452,6 @@ libtesseract_la_SOURCES += src/classify/intmatcher.cpp
 libtesseract_la_SOURCES += src/classify/intproto.cpp
 libtesseract_la_SOURCES += src/classify/kdtree.cpp
 libtesseract_la_SOURCES += src/classify/mf.cpp
-libtesseract_la_SOURCES += src/classify/mfdefs.cpp
 libtesseract_la_SOURCES += src/classify/mfoutline.cpp
 libtesseract_la_SOURCES += src/classify/mfx.cpp
 libtesseract_la_SOURCES += src/classify/normfeat.cpp
@@ -492,7 +513,7 @@ libtesseract_lstm_la_CPPFLAGS += -DINCLUDE_TENSORFLOW
 libtesseract_lstm_la_CPPFLAGS += -I/usr/include/tensorflow
 endif
 if !NO_TESSDATA_PREFIX
-libtesseract_lstm_la_CPPFLAGS += -DTESSDATA_PREFIX=@datadir@
+libtesseract_lstm_la_CPPFLAGS += -DTESSDATA_PREFIX='"@datadir@"'
 endif
 
 noinst_HEADERS += src/lstm/convolve.h
@@ -646,6 +667,7 @@ endif
 
 # Rules for src/viewer.
 
+if !GRAPHICS_DISABLED
 noinst_HEADERS += src/viewer/scrollview.h
 noinst_HEADERS += src/viewer/svmnode.h
 noinst_HEADERS += src/viewer/svutil.h
@@ -653,6 +675,7 @@ noinst_HEADERS += src/viewer/svutil.h
 libtesseract_la_SOURCES += src/viewer/scrollview.cpp
 libtesseract_la_SOURCES += src/viewer/svmnode.cpp
 libtesseract_la_SOURCES += src/viewer/svutil.cpp
+endif
 
 # TODO: Add rule to generate svpaint from svpaint.cpp.
 
@@ -690,7 +713,9 @@ libtesseract_la_SOURCES += src/wordrec/lm_state.cpp
 libtesseract_la_SOURCES += src/wordrec/outlines.cpp
 libtesseract_la_SOURCES += src/wordrec/params_model.cpp
 libtesseract_la_SOURCES += src/wordrec/pieces.cpp
+if !GRAPHICS_DISABLED
 libtesseract_la_SOURCES += src/wordrec/plotedges.cpp
+endif
 libtesseract_la_SOURCES += src/wordrec/render.cpp
 libtesseract_la_SOURCES += src/wordrec/segsearch.cpp
 libtesseract_la_SOURCES += src/wordrec/wordclass.cpp
@@ -781,10 +806,6 @@ training_CPPFLAGS += -I$(top_srcdir)/src/cutil
 training_CPPFLAGS += $(ICU_UC_CFLAGS) $(ICU_I18N_CFLAGS)
 training_CPPFLAGS += $(pango_CFLAGS)
 training_CPPFLAGS += $(cairo_CFLAGS)
-
-bin_SCRIPTS = src/training/language-specific.sh src/training/tesstrain.sh
-scripts_DATA = src/training/tesstrain_utils.sh
-scriptsdir = $(bindir)
 
 if DISABLED_LEGACY_ENGINE
 training_CPPFLAGS += -DDISABLED_LEGACY_ENGINE
@@ -1005,7 +1026,27 @@ fuzzer-api: unittest/fuzzers/fuzzer-api.cpp
           $(libcurl_LIBS) \
           -o $@
 
-CLEANFILES += fuzzer-api
+fuzzer-api-512x256: libtesseract.la
+fuzzer-api-512x256: unittest/fuzzers/fuzzer-api.cpp
+	$(CXX) $(CXXFLAGS) -g $(LIB_FUZZING_ENGINE) \
+          -DTESSERACT_FUZZER_WIDTH=512 \
+          -DTESSERACT_FUZZER_HEIGHT=256 \
+          -I $(top_srcdir)/include \
+          -I $(builddir)/include \
+          -I $(top_srcdir)/src/ccmain \
+          -I $(top_srcdir)/src/ccstruct \
+          -I $(top_srcdir)/src/ccutil \
+          $(LEPTONICA_CFLAGS) \
+          $(OPENMP_CXXFLAGS) \
+          $< \
+          $(builddir)/.libs/libtesseract.a \
+          $(LEPTONICA_LIBS) \
+          $(TENSORFLOW_LIBS) \
+          $(libarchive_LIBS) \
+          $(libcurl_LIBS) \
+          -o $@
+
+CLEANFILES += fuzzer-api fuzzer-api-512x256
 
 if ASCIIDOC
 
@@ -1114,10 +1155,9 @@ unittest_CPPFLAGS += $(pangocairo_CFLAGS)
 endif # ENABLE_TRAINING
 unittest_CPPFLAGS += -I$(top_srcdir)/src/viewer
 unittest_CPPFLAGS += -I$(top_srcdir)/src/wordrec
-unittest_CPPFLAGS += -I$(top_srcdir)/abseil
+unittest_CPPFLAGS += -I$(top_srcdir)/unittest
 if TENSORFLOW
 unittest_CPPFLAGS += -DINCLUDE_TENSORFLOW
-unittest_CPPFLAGS += -I$(top_srcdir)/unittest
 unittest_CPPFLAGS += -I/usr/include/tensorflow
 endif # TENSORFLOW
 
@@ -1127,37 +1167,6 @@ libgtest_la_SOURCES = googletest/googletest/src/gtest-all.cc
 libgtest_la_CPPFLAGS = -I$(top_srcdir)/googletest/googletest/include -I$(top_srcdir)/googletest/googletest -pthread
 libgtest_main_la_SOURCES = googletest/googletest/src/gtest_main.cc
 libgtest_main_la_CPPFLAGS = $(libgtest_la_CPPFLAGS)
-
-# Build Abseil (needed for some unit tests).
-check_LTLIBRARIES += libabseil.la
-libabseil_la_SOURCES =
-libabseil_la_SOURCES += abseil/absl/base/internal/cycleclock.cc
-libabseil_la_SOURCES += abseil/absl/base/internal/raw_logging.cc
-libabseil_la_SOURCES += abseil/absl/base/internal/spinlock.cc
-libabseil_la_SOURCES += abseil/absl/base/internal/spinlock_wait.cc
-libabseil_la_SOURCES += abseil/absl/base/internal/sysinfo.cc
-libabseil_la_SOURCES += abseil/absl/base/internal/throw_delegate.cc
-libabseil_la_SOURCES += abseil/absl/base/internal/unscaledcycleclock.cc
-libabseil_la_SOURCES += abseil/absl/numeric/int128.cc
-libabseil_la_SOURCES += abseil/absl/strings/ascii.cc
-libabseil_la_SOURCES += abseil/absl/strings/charconv.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/charconv_bigint.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/charconv_parse.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/memutil.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/str_format/arg.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/str_format/bind.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/str_format/extension.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/str_format/float_conversion.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/str_format/output.cc
-libabseil_la_SOURCES += abseil/absl/strings/internal/str_format/parser.cc
-libabseil_la_SOURCES += abseil/absl/strings/match.cc
-libabseil_la_SOURCES += abseil/absl/strings/numbers.cc
-libabseil_la_SOURCES += abseil/absl/strings/str_cat.cc
-libabseil_la_SOURCES += abseil/absl/strings/str_split.cc
-libabseil_la_SOURCES += abseil/absl/strings/string_view.cc
-libabseil_la_SOURCES += abseil/absl/time/clock.cc
-libabseil_la_SOURCES += abseil/absl/time/duration.cc
-libabseil_la_CPPFLAGS = -I$(top_srcdir)/abseil
 
 GMOCK_INCLUDES = -I$(top_srcdir)/googletest/googlemock/include \
                  -I$(top_srcdir)/googletest/googlemock \
@@ -1172,7 +1181,6 @@ libgmock_main_la_CPPFLAGS = $(GMOCK_INCLUDES) \
                             -pthread
 
 # Build unittests
-ABSEIL_LIBS = libabseil.la
 GTEST_LIBS =  libgtest.la libgtest_main.la -lpthread
 GMOCK_LIBS =  libgmock.la libgmock_main.la
 TESS_LIBS = $(GTEST_LIBS)
@@ -1294,12 +1302,11 @@ endif # !DISABLED_LEGACY_ENGINE
 
 baseapi_test_SOURCES = unittest/baseapi_test.cc
 baseapi_test_CPPFLAGS = $(unittest_CPPFLAGS)
-baseapi_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+baseapi_test_LDADD = $(TRAINING_LIBS) $(LEPTONICA_LIBS)
 
 baseapi_thread_test_SOURCES = unittest/baseapi_thread_test.cc
 baseapi_thread_test_CPPFLAGS = $(unittest_CPPFLAGS)
-baseapi_thread_test_LDADD = $(ABSEIL_LIBS)
-baseapi_thread_test_LDADD += $(TESS_LIBS) $(LEPTONICA_LIBS)
+baseapi_thread_test_LDADD = $(TESS_LIBS) $(LEPTONICA_LIBS)
 
 if !DISABLED_LEGACY_ENGINE
 bitvector_test_SOURCES = unittest/bitvector_test.cc
@@ -1335,7 +1342,7 @@ endif # !DISABLED_LEGACY_ENGINE
 
 fileio_test_SOURCES = unittest/fileio_test.cc
 fileio_test_CPPFLAGS = $(unittest_CPPFLAGS)
-fileio_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+fileio_test_LDADD = $(TRAINING_LIBS)
 
 heap_test_SOURCES = unittest/heap_test.cc
 heap_test_CPPFLAGS = $(unittest_CPPFLAGS)
@@ -1343,7 +1350,7 @@ heap_test_LDADD = $(TESS_LIBS)
 
 imagedata_test_SOURCES = unittest/imagedata_test.cc
 imagedata_test_CPPFLAGS = $(unittest_CPPFLAGS)
-imagedata_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+imagedata_test_LDADD = $(TRAINING_LIBS)
 
 if !DISABLED_LEGACY_ENGINE
 indexmapbidi_test_SOURCES = unittest/indexmapbidi_test.cc
@@ -1369,7 +1376,7 @@ intsimdmatrix_test_LDADD = $(TESS_LIBS)
 
 lang_model_test_SOURCES = unittest/lang_model_test.cc
 lang_model_test_CPPFLAGS = $(unittest_CPPFLAGS)
-lang_model_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+lang_model_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 layout_test_SOURCES = unittest/layout_test.cc
 layout_test_CPPFLAGS = $(unittest_CPPFLAGS)
@@ -1396,24 +1403,24 @@ loadlang_test_LDADD = $(TESS_LIBS) $(LEPTONICA_LIBS)
 
 lstm_recode_test_SOURCES = unittest/lstm_recode_test.cc
 lstm_recode_test_CPPFLAGS = $(unittest_CPPFLAGS)
-lstm_recode_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+lstm_recode_test_LDADD = $(TRAINING_LIBS)
 
 lstm_squashed_test_SOURCES = unittest/lstm_squashed_test.cc
 lstm_squashed_test_CPPFLAGS = $(unittest_CPPFLAGS)
-lstm_squashed_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+lstm_squashed_test_LDADD = $(TRAINING_LIBS)
 
 lstm_test_SOURCES = unittest/lstm_test.cc
 lstm_test_CPPFLAGS = $(unittest_CPPFLAGS)
-lstm_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+lstm_test_LDADD = $(TRAINING_LIBS)
 
 lstmtrainer_test_SOURCES = unittest/lstmtrainer_test.cc
 lstmtrainer_test_CPPFLAGS = $(unittest_CPPFLAGS)
-lstmtrainer_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+lstmtrainer_test_LDADD = $(TRAINING_LIBS) $(LEPTONICA_LIBS)
 
 if !DISABLED_LEGACY_ENGINE
 mastertrainer_test_SOURCES = unittest/mastertrainer_test.cc
 mastertrainer_test_CPPFLAGS = $(unittest_CPPFLAGS)
-mastertrainer_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+mastertrainer_test_LDADD = $(TRAINING_LIBS) $(LEPTONICA_LIBS)
 endif # !DISABLED_LEGACY_ENGINE
 
 matrix_test_SOURCES = unittest/matrix_test.cc
@@ -1430,7 +1437,7 @@ normstrngs_test_SOURCES += unittest/third_party/utf/rune.c
 normstrngs_test_SOURCES += unittest/util/utf8/unilib.cc
 endif # TENSORFLOW
 normstrngs_test_CPPFLAGS = $(unittest_CPPFLAGS)
-normstrngs_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+normstrngs_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 nthitem_test_SOURCES = unittest/nthitem_test.cc
 nthitem_test_CPPFLAGS = $(unittest_CPPFLAGS)
@@ -1453,14 +1460,14 @@ pango_font_info_test_SOURCES += unittest/util/utf8/unicodetext.cc
 pango_font_info_test_SOURCES += unittest/util/utf8/unilib.cc
 endif # TENSORFLOW
 pango_font_info_test_CPPFLAGS = $(unittest_CPPFLAGS)
-pango_font_info_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+pango_font_info_test_LDADD = $(TRAINING_LIBS) $(LEPTONICA_LIBS)
 pango_font_info_test_LDADD += $(ICU_I18N_LIBS)
 pango_font_info_test_LDADD += $(pangocairo_LIBS)
 pango_font_info_test_LDADD += $(pangoft2_LIBS)
 
 paragraphs_test_SOURCES = unittest/paragraphs_test.cc
 paragraphs_test_CPPFLAGS = $(unittest_CPPFLAGS)
-paragraphs_test_LDADD = $(ABSEIL_LIBS) $(TESS_LIBS)
+paragraphs_test_LDADD = $(TESS_LIBS)
 
 if !DISABLED_LEGACY_ENGINE
 params_model_test_SOURCES = unittest/params_model_test.cc
@@ -1475,11 +1482,11 @@ progress_test_LDADD = $(GTEST_LIBS) $(GMOCK_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
 
 qrsequence_test_SOURCES = unittest/qrsequence_test.cc
 qrsequence_test_CPPFLAGS = $(unittest_CPPFLAGS)
-qrsequence_test_LDADD = $(ABSEIL_LIBS) $(TESS_LIBS)
+qrsequence_test_LDADD = $(TESS_LIBS)
 
 recodebeam_test_SOURCES = unittest/recodebeam_test.cc
 recodebeam_test_CPPFLAGS = $(unittest_CPPFLAGS)
-recodebeam_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+recodebeam_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 rect_test_SOURCES = unittest/rect_test.cc
 rect_test_CPPFLAGS = $(unittest_CPPFLAGS)
@@ -1487,7 +1494,7 @@ rect_test_LDADD = $(TESS_LIBS)
 
 resultiterator_test_SOURCES = unittest/resultiterator_test.cc
 resultiterator_test_CPPFLAGS = $(unittest_CPPFLAGS)
-resultiterator_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+resultiterator_test_LDADD = $(TRAINING_LIBS)
 resultiterator_test_LDADD += $(LEPTONICA_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 scanutils_test_SOURCES = unittest/scanutils_test.cc
@@ -1497,7 +1504,7 @@ scanutils_test_LDADD = $(TRAINING_LIBS)
 if !DISABLED_LEGACY_ENGINE
 shapetable_test_SOURCES = unittest/shapetable_test.cc
 shapetable_test_CPPFLAGS = $(unittest_CPPFLAGS)
-shapetable_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS)
+shapetable_test_LDADD = $(TRAINING_LIBS)
 endif # !DISABLED_LEGACY_ENGINE
 
 stats_test_SOURCES = unittest/stats_test.cc
@@ -1510,7 +1517,7 @@ stridemap_test_LDADD = $(TESS_LIBS)
 
 stringrenderer_test_SOURCES = unittest/stringrenderer_test.cc
 stringrenderer_test_CPPFLAGS = $(unittest_CPPFLAGS)
-stringrenderer_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+stringrenderer_test_LDADD = $(TRAINING_LIBS) $(LEPTONICA_LIBS)
 stringrenderer_test_LDADD += $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 stringrenderer_test_LDADD += $(pangocairo_LIBS) $(pangoft2_LIBS)
 stringrenderer_test_LDADD += $(cairo_LIBS) $(pango_LIBS)
@@ -1528,17 +1535,15 @@ tabvector_test_CPPFLAGS = $(unittest_CPPFLAGS)
 tabvector_test_LDADD = $(TESS_LIBS)
 
 tatweel_test_SOURCES = unittest/tatweel_test.cc
-if TENSORFLOW
 tatweel_test_SOURCES += unittest/third_party/utf/rune.c
 tatweel_test_SOURCES += unittest/util/utf8/unicodetext.cc
 tatweel_test_SOURCES += unittest/util/utf8/unilib.cc
-endif # TENSORFLOW
 tatweel_test_CPPFLAGS = $(unittest_CPPFLAGS)
 tatweel_test_LDADD = $(TRAINING_LIBS)
 
 textlineprojection_test_SOURCES = unittest/textlineprojection_test.cc
 textlineprojection_test_CPPFLAGS = $(unittest_CPPFLAGS)
-textlineprojection_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+textlineprojection_test_LDADD = $(TRAINING_LIBS) $(LEPTONICA_LIBS)
 
 tfile_test_SOURCES = unittest/tfile_test.cc
 tfile_test_CPPFLAGS = $(unittest_CPPFLAGS)
@@ -1550,7 +1555,7 @@ unichar_test_LDADD = $(TRAINING_LIBS) $(ICU_UC_LIBS)
 
 unicharcompress_test_SOURCES = unittest/unicharcompress_test.cc
 unicharcompress_test_CPPFLAGS = $(unittest_CPPFLAGS)
-unicharcompress_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_UC_LIBS)
+unicharcompress_test_LDADD = $(TRAINING_LIBS) $(ICU_UC_LIBS)
 
 unicharset_test_SOURCES = unittest/unicharset_test.cc
 unicharset_test_CPPFLAGS = $(unittest_CPPFLAGS)
@@ -1558,19 +1563,19 @@ unicharset_test_LDADD = $(TRAINING_LIBS) $(ICU_UC_LIBS)
 
 validate_grapheme_test_SOURCES = unittest/validate_grapheme_test.cc
 validate_grapheme_test_CPPFLAGS = $(unittest_CPPFLAGS)
-validate_grapheme_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+validate_grapheme_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 validate_indic_test_SOURCES = unittest/validate_indic_test.cc
 validate_indic_test_CPPFLAGS = $(unittest_CPPFLAGS)
-validate_indic_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+validate_indic_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 validate_khmer_test_SOURCES = unittest/validate_khmer_test.cc
 validate_khmer_test_CPPFLAGS = $(unittest_CPPFLAGS)
-validate_khmer_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+validate_khmer_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 validate_myanmar_test_SOURCES = unittest/validate_myanmar_test.cc
 validate_myanmar_test_CPPFLAGS = $(unittest_CPPFLAGS)
-validate_myanmar_test_LDADD = $(ABSEIL_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+validate_myanmar_test_LDADD = $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 validator_test_SOURCES = unittest/validator_test.cc
 validator_test_CPPFLAGS = $(unittest_CPPFLAGS)

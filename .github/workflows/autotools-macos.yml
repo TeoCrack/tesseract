@@ -29,7 +29,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-           brew install automake autoconf-archive
+           brew install autoconf automake
            brew install leptonica
            brew install cairo pango icu4c
            brew install cabextract
@@ -92,7 +92,7 @@ jobs:
       run: |
            export "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig"
            cd test
-           ${{ matrix.config.cxx }} -o basicapitest testing/basicapitest.cpp -I/usr/local/include -L/usr/local/lib `pkg-config --cflags --libs tesseract lept ` -pthread -std=c++11
+           ${{ matrix.config.cxx }} -o basicapitest testing/basicapitest.cpp $(pkg-config --cflags --libs tesseract lept) -pthread -std=c++11 -framework accelerate
            ./basicapitest
 
     - name: Display Compiler Version
@@ -133,7 +133,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-           sudo port install autoconf autoconf-archive automake libtool pkgconfig
+           sudo port install autoconf automake libtool pkgconfig
            sudo port install leptonica
            sudo port install cairo pango
            sudo port install icu +devel
@@ -189,7 +189,7 @@ jobs:
       run: |
            export "PKG_CONFIG_PATH=/usr/local/lib/pkgconfig"
            cd test
-           ${{ matrix.config.cxx }} -o basicapitest testing/basicapitest.cpp -I/opt/local/include -L/opt/local/lib -I/usr/local/include -L/usr/local/lib `pkg-config --cflags --libs tesseract lept ` -pthread -std=c++11
+           ${{ matrix.config.cxx }} -o basicapitest testing/basicapitest.cpp -I/opt/local/include -L/opt/local/lib $(pkg-config --cflags --libs tesseract lept) -pthread -std=c++11 -framework Accelerate
            ./basicapitest
 
     - name: Display Compiler Version

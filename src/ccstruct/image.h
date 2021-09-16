@@ -31,11 +31,24 @@ public:
   Image(Pix *pix) : pix_(pix) {}
 
   // service
+  bool operator==(decltype(nullptr)) const { return pix_ == nullptr; }
+  bool operator!=(decltype(nullptr)) const { return pix_ != nullptr; }
+  explicit operator bool() const { return pix_ != nullptr; }
   operator Pix *() const { return pix_; }
+  explicit operator Pix **() { return &pix_; }
   Pix *operator->() const { return pix_; }
 
   // api
+  Image clone() const; // increases refcount
+  Image copy() const;  // does full copy
   void destroy();
+  bool isZero() const;
+
+  // ops
+  Image operator|(Image) const;
+  Image &operator|=(Image);
+  Image operator&(Image) const;
+  Image &operator&=(Image);
 };
 
 } // namespace tesseract

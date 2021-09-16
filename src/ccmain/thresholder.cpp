@@ -16,11 +16,6 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
-#include <allheaders.h>
-
-#include <cstdint> // for uint32_t
-#include <cstring>
-
 #include "otsuthr.h"
 #include "thresholder.h"
 #include "tprintf.h" // for tprintf
@@ -28,6 +23,12 @@
 #if defined(USE_OPENCL)
 #  include "openclwrapper.h" // for OpenclDevice
 #endif
+
+#include <allheaders.h>
+
+#include <cstdint> // for uint32_t
+#include <cstring>
+#include <tuple>
 
 namespace tesseract {
 
@@ -174,7 +175,7 @@ void ImageThresholder::SetImage(const Image pix) {
   } else if (depth > 1 && depth < 8) {
     pix_ = pixConvertTo8(src, false);
   } else {
-    pix_ = pixCopy(nullptr, src);
+    pix_ = src.copy();
   }
   depth = pixGetDepth(pix_);
   pix_channels_ = depth / 8;
@@ -184,11 +185,41 @@ void ImageThresholder::SetImage(const Image pix) {
   Init();
 }
 
+std::tuple<bool, Image, Image, Image> ImageThresholder::Threshold(
+                                                         ThresholdMethod method) {
+  Image pix_binary = nullptr;
+  Image pix_thresholds = nullptr;
+
+  if (pix_channels_ == 0) {
+    // We have a binary image, but it still has to be copied, as this API
+    // allows the caller to modify the output.
+    Image original = GetPixRect();
+    pix_binary = original.copy();
+    original.destroy();
+    return std::make_tuple(false, nullptr, pix_binary, nullptr);
+  }
+
+  auto pix_grey = GetPixRectGrey();
+
+  int r;
+  if (method == ThresholdMethod::Sauvola) {
+    r = pixSauvolaBinarizeTiled(pix_grey, 25, 0.40, 300, 300, (PIX**)pix_thresholds,
+                                (PIX**)pix_binary);
+  } else {
+    // AdaptiveOtsu.
+    r = pixOtsuAdaptiveThreshold(pix_grey, 300, 300, 0, 0, 0.1,
+                                 (PIX**)pix_thresholds, (PIX**)pix_binary);
+  }
+
+  bool ok = (r == 0);
+  return std::make_tuple(ok, pix_grey, pix_binary, pix_thresholds);
+}
+
 // Threshold the source image as efficiently as possible to the output Pix.
 // Creates a Pix and sets pix to point to the resulting pointer.
 // Caller must use pixDestroy to free the created Pix.
 /// Returns false on error.
-bool ImageThresholder::ThresholdToPix(PageSegMode pageseg_mode, Image *pix) {
+bool ImageThresholder::ThresholdToPix(Image *pix) {
   if (image_width_ > INT16_MAX || image_height_ > INT16_MAX) {
     tprintf("Image too large: (%d, %d)\n", image_width_, image_height_);
     return false;
@@ -197,7 +228,7 @@ bool ImageThresholder::ThresholdToPix(PageSegMode pageseg_mode, Image *pix) {
     // We have a binary image, but it still has to be copied, as this API
     // allows the caller to modify the output.
     Image original = GetPixRect();
-    *pix = pixCopy(nullptr, original);
+    *pix = original.copy();
     original.destroy();
   } else {
     OtsuThresholdRectToPix(pix_, pix);
@@ -242,7 +273,7 @@ void ImageThresholder::Init() {
 Image ImageThresholder::GetPixRect() {
   if (IsFullImage()) {
     // Just clone the whole thing.
-    return pixClone(pix_);
+    return pix_.clone();
   } else {
     // Crop to the given rectangle.
     Box *box = boxCreate(rect_left_, rect_top_, rect_width_, rect_height_);

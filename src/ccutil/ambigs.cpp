@@ -47,8 +47,6 @@ AmbigSpec::AmbigSpec() {
   wrong_ngram_size = 0;
 }
 
-ELISTIZE(AmbigSpec)
-
 // Initializes the ambigs by adding a nullptr pointer to each table.
 void UnicharAmbigs::InitUnicharAmbigs(const UNICHARSET &unicharset, bool use_ambigs_for_adaption) {
   for (int i = 0; i < unicharset.size(); ++i) {
@@ -93,7 +91,7 @@ void UnicharAmbigs::LoadUnicharAmbigs(const UNICHARSET &encoder_set, TFile *ambi
 
   // Determine the version of the ambigs file.
   int version = 0;
-  ASSERT_HOST(ambig_file->FGets(buffer, kBufferSize) != nullptr && strlen(buffer) > 0);
+  ASSERT_HOST(ambig_file->FGets(buffer, kBufferSize) != nullptr && buffer[0] != '\0');
   if (*buffer == 'v') {
     version = static_cast<int>(strtol(buffer + 1, nullptr, 10));
     ++line_num;
@@ -335,7 +333,7 @@ bool UnicharAmbigs::ParseAmbiguityLine(int line_num, int version, int debug_leve
     return false;
   }
   if (version > 0) {
-    // The next field being true indicates that the abiguity should
+    // The next field being true indicates that the ambiguity should
     // always be substituted (e.g. '' should always be changed to ").
     // For such "certain" n -> m ambigs tesseract will insert character
     // fragments for the n pieces in the unicharset. AmbigsFound()

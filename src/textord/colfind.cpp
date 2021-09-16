@@ -38,7 +38,6 @@
 #include "strokewidth.h"
 #include "tablefind.h"
 #include "workingpartset.h"
-#include "tabletransfer.h"
 
 #include <algorithm>
 
@@ -95,7 +94,6 @@ ColumnFinder::ColumnFinder(int gridsize, const ICOORD &bleft, const ICOORD &trig
     , nontext_map_(nullptr)
     , projection_(resolution)
     , denorm_(nullptr)
-    , input_blobs_win_(nullptr)
     , equation_detect_(nullptr) {
   TabVector_IT h_it(&horizontal_lines_);
   h_it.add_list_after(hlines);
@@ -107,7 +105,9 @@ ColumnFinder::~ColumnFinder() {
   }
   delete[] best_columns_;
   delete stroke_width_;
+#ifndef GRAPHICS_DISABLED
   delete input_blobs_win_;
+#endif
   nontext_map_.destroy();
   while (denorm_ != nullptr) {
     DENORM *dead_denorm = denorm_;
@@ -287,7 +287,7 @@ int ColumnFinder::FindBlocks(PageSegMode pageseg_mode, Image scaled_color, int s
                              TO_BLOCK *input_block, Image photo_mask_pix, Image thresholds_pix,
                              Image grey_pix, DebugPixa *pixa_debug, BLOCK_LIST *blocks,
                              BLOBNBOX_LIST *diacritic_blobs, TO_BLOCK_LIST *to_blocks) {
-  pixOr(photo_mask_pix, photo_mask_pix, nontext_map_);
+  photo_mask_pix |= nontext_map_;
   stroke_width_->FindLeaderPartitions(input_block, &part_grid_);
   stroke_width_->RemoveLineResidue(&big_parts_);
   FindInitialTabVectors(nullptr, min_gutter_width_, tabfind_aligned_gap_fraction_, input_block);
@@ -465,7 +465,9 @@ int ColumnFinder::FindBlocks(PageSegMode pageseg_mode, Image scaled_color, int s
   }
 
 #ifndef GRAPHICS_DISABLED
-  DisplayBlocks(blocks);
+  if (textord_tabfind_show_blocks) {
+    DisplayBlocks(blocks);
+  }
 #endif
   RotateAndReskewBlocks(input_is_rtl, to_blocks);
   int result = 0;
@@ -512,22 +514,20 @@ void ColumnFinder::SetEquationDetect(EquationDetectBase *detect) {
 
 // Displays the blob and block bounding boxes in a window called Blocks.
 void ColumnFinder::DisplayBlocks(BLOCK_LIST *blocks) {
-  if (textord_tabfind_show_blocks) {
-    if (blocks_win_ == nullptr) {
-      blocks_win_ = MakeWindow(700, 300, "Blocks");
-    } else {
-      blocks_win_->Clear();
-    }
-    DisplayBoxes(blocks_win_);
-    BLOCK_IT block_it(blocks);
-    int serial = 1;
-    for (block_it.mark_cycle_pt(); !block_it.cycled_list(); block_it.forward()) {
-      BLOCK *block = block_it.data();
-      block->pdblk.plot(blocks_win_, serial++,
-                        textord_debug_printable ? ScrollView::BLUE : ScrollView::GREEN);
-    }
-    blocks_win_->Update();
+  if (blocks_win_ == nullptr) {
+    blocks_win_ = MakeWindow(700, 300, "Blocks");
+  } else {
+    blocks_win_->Clear();
   }
+  DisplayBoxes(blocks_win_);
+  BLOCK_IT block_it(blocks);
+  int serial = 1;
+  for (block_it.mark_cycle_pt(); !block_it.cycled_list(); block_it.forward()) {
+    BLOCK *block = block_it.data();
+    block->pdblk.plot(blocks_win_, serial++,
+                      textord_debug_printable ? ScrollView::BLUE : ScrollView::GREEN);
+  }
+  blocks_win_->Update();
 }
 
 // Displays the column edges at each grid y coordinate defined by
@@ -640,7 +640,7 @@ void ColumnFinder::ImproveColumnCandidates(PartSetVector *src_sets, PartSetVecto
   } while (column_sets->empty() && !good_only);
   if (column_sets->empty()) {
     // TODO: optimize.
-    column_sets = &temp_cols;
+    *column_sets = temp_cols;
     temp_cols.clear();
   } else {
     for (auto data : temp_cols) {
@@ -952,7 +952,6 @@ static void ReleaseAllBlobsAndDeleteUnused(BLOBNBOX_LIST *blobs) {
   for (BLOBNBOX_IT blob_it(blobs); !blob_it.empty(); blob_it.forward()) {
     BLOBNBOX *blob = blob_it.extract();
     if (blob->owner() == nullptr) {
-      delete blob->cblob();
       delete blob;
     }
   }
@@ -1527,7 +1526,6 @@ static void RotateAndExplodeBlobList(const FCOORD &blob_rotation, BLOBNBOX_LIST 
         it.add_after_stay_put(new_blob);
       }
       it.extract();
-      delete cblob;
       delete blob;
     } else {
       if (blob_rotation.x() != 1.0f || blob_rotation.y() != 0.0f) {
@@ -1591,11 +1589,6 @@ void ColumnFinder::RotateAndReskewBlocks(bool input_is_rtl, TO_BLOCK_LIST *block
     if (textord_debug_tabfind >= 2) {
       tprintf("Block median size = (%d, %d)\n", block->median_size().x(), block->median_size().y());
     }
-  }
-
-  auto &tables = uniqueInstance<std::vector<TessTable>>();
-  for (TessTable &mt : tables) {
-    mt.box.rotate_large(reskew_);
   }
 }
 

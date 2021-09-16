@@ -78,7 +78,7 @@ const int kMinRampSize = 1000;
 // With no dilation, after covolution, the images are so light that a heavy
 // constant offset is required to make the 0 image look reasonable. A simple
 // constant offset multiple of exposure to undo this value is enough to achieve
-// all the required lightening. This gives the advantage that exposure level 1
+// all the required lighting. This gives the advantage that exposure level 1
 // with a single dilation gives a good impression of the broken-yet-too-dark
 // problem that is often seen in scans.
 // A small random rotation gives some varying greyscale values on the edges,
@@ -179,7 +179,7 @@ Image DegradeImage(Image input, int exposure, TRand *randomizer, float *rotation
 Image PrepareDistortedPix(const Image pix, bool perspective, bool invert, bool white_noise,
                          bool smooth_noise, bool blur, int box_reduction, TRand *randomizer,
                          std::vector<TBOX> *boxes) {
-  Image distorted = pixCopy(nullptr, pix);
+  Image distorted = pix.copy();
   // Things to do to synthetic training data.
   if ((white_noise || smooth_noise) && randomizer->SignedRand(1.0) > 0.0) {
     // TODO(rays) Cook noise in a more thread-safe manner than rand().
